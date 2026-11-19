@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "Encontre e compare hotéis e quartos por destino, datas e hóspedes." },
     ],
   }),
-  errorComponent: ({ error }) => <p role="alert" className="p-8 text-destructive">{error.message}</p>,
+  errorComponent: ({ error }) => <p role="alert" className="p-8 text-destructive">{error instanceof Error ? error.message : String(error)}</p>,
   notFoundComponent: () => <p className="p-8">Nada encontrado.</p>,
   component: Home,
 });

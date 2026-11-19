@@ -32,7 +32,7 @@ export const Route = createFileRoute("/hotel/$id")({
       { property: "og:description", content: loaderData?.description ?? "Detalhes do hotel e quartos disponíveis." },
     ],
   }),
-  errorComponent: ({ error }) => <p role="alert" className="p-8 text-destructive">{error.message}</p>,
+  errorComponent: ({ error }) => <p role="alert" className="p-8 text-destructive">{error instanceof Error ? error.message : String(error)}</p>,
   notFoundComponent: () => (
     <div className="p-8">
       <p>Hotel não encontrado.</p>

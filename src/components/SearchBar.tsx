@@ -4,7 +4,7 @@ import { MapPin, CalendarDays, Users, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export type SearchValues = { city?: string; checkin?: string; checkout?: string; guests?: number };
+export type SearchValues = { city?: string | undefined; checkin?: string | undefined; checkout?: string | undefined; guests?: number | undefined };
 
 export function SearchBar({ initial }: { initial: SearchValues }) {
   const navigate = useNavigate();
