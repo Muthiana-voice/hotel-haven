@@ -14,7 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      hotels: {
+        Row: {
+          address: string | null
+          city: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          rating: number | null
+          status: string
+        }
+        Insert: {
+          address?: string | null
+          city: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          rating?: number | null
+          status?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          rating?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
+      rooms: {
+        Row: {
+          amenities: string[]
+          capacity: number
+          created_at: string
+          description: string | null
+          hotel_id: string
+          id: string
+          images: string[]
+          name: string
+          price_per_night: number
+        }
+        Insert: {
+          amenities?: string[]
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          hotel_id: string
+          id?: string
+          images?: string[]
+          name: string
+          price_per_night?: number
+        }
+        Update: {
+          amenities?: string[]
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          hotel_id?: string
+          id?: string
+          images?: string[]
+          name?: string
+          price_per_night?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
