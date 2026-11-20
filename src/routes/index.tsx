@@ -75,7 +75,7 @@ function Home() {
     () => Array.from(new Set(hotels.map((hotel) => hotel.city).filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt")),
     [hotels],
   );
-  const activeCity = search.city ?? selectedCity;
+  const activeCity = selectedCity;
   const visibleHotels = useMemo(
     () => activeCity
       ? hotels.filter((hotel) => hotel.city.toLocaleLowerCase().includes(activeCity.toLocaleLowerCase()))
