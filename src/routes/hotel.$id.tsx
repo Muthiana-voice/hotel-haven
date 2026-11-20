@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { CompareToggle } from "@/components/CompareToggle";
+import { HotelMap } from "@/components/HotelMap";
 import { hotelQuery } from "@/lib/hotels";
 
 const searchSchema = z.object({
@@ -69,8 +70,25 @@ function HotelPage() {
           </div>
           {hotel.description && <p className="mt-6 leading-relaxed text-foreground/80">{hotel.description}</p>}
         </div>
-        <div className="grid aspect-square place-items-center rounded-2xl border border-dashed bg-muted text-muted-foreground lg:aspect-auto">
-          <div className="flex flex-col items-center gap-2 text-sm"><Map className="size-8" />Mapa em breve</div>
+        <div className="min-w-0">
+          {hotel.latitude != null && hotel.longitude != null ? (
+            <HotelMap
+              singleHotel
+              className="h-[320px] sm:h-[380px]"
+              hotels={[{
+                id: hotel.id,
+                name: hotel.name,
+                city: hotel.city,
+                address: hotel.address,
+                latitude: hotel.latitude,
+                longitude: hotel.longitude,
+              }]}
+            />
+          ) : (
+            <p className="rounded-xl border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              A localização deste hotel ainda não está disponível no mapa.
+            </p>
+          )}
         </div>
       </div>
 
