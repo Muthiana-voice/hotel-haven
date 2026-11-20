@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Map, Star, Users } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Star, Users } from "lucide-react";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { toast } from "sonner";
@@ -72,18 +72,29 @@ function HotelPage() {
         </div>
         <div className="min-w-0">
           {hotel.latitude != null && hotel.longitude != null ? (
-            <HotelMap
-              singleHotel
-              className="h-[320px] sm:h-[380px]"
-              hotels={[{
-                id: hotel.id,
-                name: hotel.name,
-                city: hotel.city,
-                address: hotel.address,
-                latitude: hotel.latitude,
-                longitude: hotel.longitude,
-              }]}
-            />
+            <div className="space-y-3">
+              <HotelMap
+                singleHotel
+                className="h-[320px] sm:h-[380px]"
+                hotels={[{
+                  id: hotel.id,
+                  name: hotel.name,
+                  city: hotel.city,
+                  address: hotel.address,
+                  latitude: hotel.latitude,
+                  longitude: hotel.longitude,
+                }]}
+              />
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${hotel.latitude},${hotel.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+              >
+                <Navigation className="size-4" /> Como chegar / Direções
+              </a>
+              <p className="text-xs text-muted-foreground">As direções abrem no Google Maps e podem usar a sua localização actual, se estiver disponível.</p>
+            </div>
           ) : (
             <p className="rounded-xl border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
               A localização deste hotel ainda não está disponível no mapa.
