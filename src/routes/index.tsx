@@ -6,6 +6,7 @@ import { zodValidator } from "@tanstack/zod-adapter";
 import { SearchBar } from "@/components/SearchBar";
 import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { CompareToggle } from "@/components/CompareToggle";
+import { HotelMap } from "@/components/HotelMap";
 import { hotelsQuery } from "@/lib/hotels";
 
 const searchSchema = z.object({
@@ -53,6 +54,18 @@ function Home() {
             {search.city ? `Hotéis em “${search.city}”` : "Hotéis em destaque"}
           </h2>
           <span className="text-sm text-muted-foreground">{hotels.length} resultado(s)</span>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="mb-3 font-display text-xl font-semibold">Mapa dos hotéis</h3>
+          <HotelMap hotels={hotels.map((hotel) => ({
+            id: hotel.id,
+            name: hotel.name,
+            city: hotel.city,
+            address: hotel.address,
+            latitude: hotel.latitude,
+            longitude: hotel.longitude,
+          }))} />
         </div>
 
         {hotels.length === 0 ? (
