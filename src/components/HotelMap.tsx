@@ -15,6 +15,9 @@ type HotelMapProps = {
   className?: string;
   zoom?: number;
   singleHotel?: boolean;
+  /** Optional user position and route line ([lat, lng] points) to draw to the hotel. */
+  userLocation?: [number, number] | null;
+  route?: [number, number][] | null;
 };
 
 function hasCoordinates(hotel: HotelMapItem): hotel is HotelMapItem & { latitude: number; longitude: number } {
@@ -23,7 +26,7 @@ function hasCoordinates(hotel: HotelMapItem): hotel is HotelMapItem & { latitude
     hotel.latitude >= -90 && hotel.latitude <= 90 && hotel.longitude >= -180 && hotel.longitude <= 180;
 }
 
-export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false }: HotelMapProps) {
+export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false, userLocation = null, route = null }: HotelMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -79,7 +82,14 @@ export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false
         return marker;
       });
 
-      if (markersRef.current.length > 1 && !singleHotel) {
+      if (userLocation) {
+        L.circleMarker(userLocation, { radius: 8, color: "#ffffff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 })
+          .addTo(map).bindPopup("Você está aqui");
+      }
+      if (route && route.length > 1) {
+        const line = L.polyline(route, { color: "#0f766e", weight: 5, opacity: 0.85 }).addTo(map);
+        map.fitBounds(line.getBounds(), { padding: [32, 32] });
+      } else if (markersRef.current.length > 1 && !singleHotel) {
         const bounds = L.latLngBounds(mappedHotels.map((hotel) => [hotel.latitude, hotel.longitude] as [number, number]));
         map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
       } else {
@@ -98,7 +108,7 @@ export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [hotels, zoom, singleHotel]);
+  }, [hotels, zoom, singleHotel, userLocation, route]);
 
   if (availableHotels.length === 0) return (
     <p className="rounded-xl border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

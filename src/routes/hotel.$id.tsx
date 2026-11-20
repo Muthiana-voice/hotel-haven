@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Navigation, Star, Users } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, MapPin, Navigation, Route as RouteIcon, Star, Users, X } from "lucide-react";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { toast } from "sonner";
@@ -10,6 +10,8 @@ import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { CompareToggle } from "@/components/CompareToggle";
 import { HotelMap } from "@/components/HotelMap";
 import { hotelQuery } from "@/lib/hotels";
+import { useMemo, useState } from "react";
+import { fetchDrivingRoute, getCurrentPosition, type RouteResult } from "@/lib/route";
 
 const searchSchema = z.object({
   city: z.string().optional(),
@@ -49,7 +51,28 @@ function HotelPage() {
   const { id } = Route.useParams();
   const search = Route.useSearch();
   const { data: hotel } = useSuspenseQuery(hotelQuery(id));
+  const [me, setMe] = useState<[number, number] | null>(null);
+  const [route, setRoute] = useState<RouteResult | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
+  const mapHotels = useMemo(() => hotel ? [{
+    id: hotel.id, name: hotel.name, city: hotel.city, address: hotel.address,
+    latitude: hotel.latitude, longitude: hotel.longitude,
+  }] : [], [hotel]);
   if (!hotel) return null;
+
+  async function traceRoute() {
+    if (hotel?.latitude == null || hotel.longitude == null) return;
+    setLoadingRoute(true);
+    try {
+      const pos = await getCurrentPosition();
+      setMe(pos);
+      setRoute(await fetchDrivingRoute(pos, [hotel.latitude, hotel.longitude]));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível traçar a rota.");
+    } finally {
+      setLoadingRoute(false);
+    }
+  }
   const guests = search.guests ?? 1;
   const rooms = [...(hotel.rooms ?? [])].sort((a, b) => Number(a.price_per_night) - Number(b.price_per_night));
 
@@ -73,27 +96,28 @@ function HotelPage() {
         <div className="min-w-0">
           {hotel.latitude != null && hotel.longitude != null ? (
             <div className="space-y-3">
-              <HotelMap
-                singleHotel
-                className="h-[320px] sm:h-[380px]"
-                hotels={[{
-                  id: hotel.id,
-                  name: hotel.name,
-                  city: hotel.city,
-                  address: hotel.address,
-                  latitude: hotel.latitude,
-                  longitude: hotel.longitude,
-                }]}
-              />
+              <HotelMap singleHotel className="h-[320px] sm:h-[380px]" hotels={mapHotels} userLocation={me} route={route?.points ?? null} />
+              {route && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-sm">
+                  <div>
+                    <div className="font-semibold">{route.distanceKm.toFixed(1)} km · {Math.round(route.durationMin)} min</div>
+                    <div className="text-xs text-muted-foreground">Rota de carro a partir da sua localização</div>
+                  </div>
+                  <Button variant="ghost" size="icon" aria-label="Limpar rota" onClick={() => { setRoute(null); setMe(null); }}><X /></Button>
+                </div>
+              )}
+              <Button className="min-h-11 w-full rounded-xl" onClick={traceRoute} disabled={loadingRoute}>
+                {loadingRoute ? <Loader2 className="animate-spin" /> : <RouteIcon />}
+                {route ? "Atualizar rota" : "Traçar rota no mapa"}
+              </Button>
               <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${hotel.latitude},${hotel.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+                className="inline-flex w-full items-center justify-center gap-2 text-sm font-medium text-primary hover:underline"
               >
-                <Navigation className="size-4" /> Como chegar / Direções
+                <Navigation className="size-4" /> Abrir no Google Maps <ExternalLink className="size-3.5" />
               </a>
-              <p className="text-xs text-muted-foreground">As direções abrem no Google Maps e podem usar a sua localização actual, se estiver disponível.</p>
             </div>
           ) : (
             <p className="rounded-xl border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

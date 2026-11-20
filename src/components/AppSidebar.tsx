@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Home, BedDouble, Map, Scale, UserRound, Building2 } from "lucide-react";
+import { Home, BedDouble, Scale, UserRound, Building2 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, useSidebar,
@@ -31,11 +31,6 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={item}>
                   <Link to="/" hash="hoteis" search={(p) => p} onClick={close}><BedDouble />Hotéis</Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={item}>
-                  <Link to="/" hash="mapa" search={(p) => p} onClick={close}><Map />Mapa</Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
