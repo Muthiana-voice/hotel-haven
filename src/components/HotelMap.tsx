@@ -27,7 +27,7 @@ export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
-  const mappedHotels = hotels.filter(hasCoordinates);
+  const availableHotels = hotels.filter(hasCoordinates);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,16 +35,17 @@ export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false
 
     async function renderMap() {
       const container = containerRef.current;
-      if (!container || mappedHotels.length === 0) return;
+      const mappedHotels = hotels.filter(hasCoordinates);
+      const firstHotel = mappedHotels[0];
+      if (!container || !firstHotel) return;
       const L = await import("leaflet");
       if (cancelled || !containerRef.current) return;
 
       const map = L.map(container, {
-        center: [mappedHotels[0].latitude, mappedHotels[0].longitude],
+        center: [firstHotel.latitude, firstHotel.longitude],
         zoom: singleHotel ? 14 : zoom,
         scrollWheelZoom: false,
         zoomControl: true,
-        tap: true,
       });
       mapRef.current = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -82,7 +83,7 @@ export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false
         const bounds = L.latLngBounds(mappedHotels.map((hotel) => [hotel.latitude, hotel.longitude] as [number, number]));
         map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
       } else {
-        map.setView([mappedHotels[0].latitude, mappedHotels[0].longitude], singleHotel ? 14 : zoom);
+        map.setView([firstHotel.latitude, firstHotel.longitude], singleHotel ? 14 : zoom);
       }
       observer = new ResizeObserver(() => map.invalidateSize());
       observer.observe(container);
@@ -97,9 +98,9 @@ export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [hotels, zoom, singleHotel, mappedHotels.length]);
+  }, [hotels, zoom, singleHotel]);
 
-  if (mappedHotels.length === 0) return (
+  if (availableHotels.length === 0) return (
     <p className="rounded-xl border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
       Nenhum hotel com coordenadas geográficas disponíveis para apresentar no mapa.
     </p>
