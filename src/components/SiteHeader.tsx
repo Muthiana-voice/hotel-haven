@@ -1,21 +1,19 @@
 import { Link } from "@tanstack/react-router";
-import { Hotel } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link to="/" search={{}} className="flex items-center gap-2 font-display text-xl font-semibold text-foreground">
-          <span className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
-            <Hotel className="size-4" />
-          </span>
-          Estadia
+    <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl">
+      <div className="grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 md:px-6">
+        <SidebarTrigger className="md:invisible" aria-label="Abrir menu" />
+        <Link to="/" search={{}} className="justify-self-center truncate font-display text-xl font-semibold tracking-[0.18em] text-foreground md:text-2xl">
+          LUV <span className="text-primary">CONECT</span>
         </Link>
-        <nav className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">Entrar</Button>
-          <Button size="sm">Cadastrar Hotel</Button>
-        </nav>
+        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Entrar">
+          <UserRound />
+        </Button>
       </div>
     </header>
   );

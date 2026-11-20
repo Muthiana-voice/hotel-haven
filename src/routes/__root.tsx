@@ -11,6 +11,9 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import { SiteHeader } from "@/components/SiteHeader";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { CompareBar } from "@/components/CompareBar";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
@@ -84,7 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Estadia — Reserva de hotéis" },
+      { title: "LUV CONECT — Reserva de hotéis" },
       { name: "description", content: "Portal de reserva de hotéis." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -125,8 +128,14 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <SiteHeader />
-      <Outlet />
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset className="min-w-0">
+          <SiteHeader />
+          <div className="flex-1"><Outlet /></div>
+          <SiteFooter />
+        </SidebarInset>
+      </SidebarProvider>
       <CompareBar />
       <Toaster />
     </QueryClientProvider>

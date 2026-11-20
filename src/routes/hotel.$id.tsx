@@ -27,9 +27,9 @@ export const Route = createFileRoute("/hotel/$id")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: loaderData ? `${loaderData.name} — Estadia` : "Hotel — Estadia" },
+      { title: loaderData ? `${loaderData.name} — LUV CONECT` : "Hotel — LUV CONECT" },
       { name: "description", content: loaderData?.description ?? "Detalhes do hotel e quartos disponíveis." },
-      { property: "og:title", content: loaderData ? `${loaderData.name} — Estadia` : "Hotel — Estadia" },
+      { property: "og:title", content: loaderData ? `${loaderData.name} — LUV CONECT` : "Hotel — LUV CONECT" },
       { property: "og:description", content: loaderData?.description ?? "Detalhes do hotel e quartos disponíveis." },
     ],
   }),

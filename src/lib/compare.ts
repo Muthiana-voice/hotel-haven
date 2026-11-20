@@ -14,6 +14,7 @@ export const MAX_COMPARE = 3;
 let items: CompareItem[] = [];
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
+const openListeners = new Set<() => void>();
 
 export const compareStore = {
   get: () => items,
@@ -30,6 +31,14 @@ export const compareStore = {
   clear() {
     items = [];
     emit();
+  },
+  /** Ask the compare bar to open its side-by-side dialog. */
+  requestOpen() {
+    openListeners.forEach((l) => l());
+  },
+  onOpenRequest(l: () => void) {
+    openListeners.add(l);
+    return () => openListeners.delete(l);
   },
   subscribe(l: () => void) {
     listeners.add(l);

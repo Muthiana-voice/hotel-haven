@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,13 +10,17 @@ const brl = (n?: number | null) =>
 export function CompareBar() {
   const items = useCompare();
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const off = compareStore.onOpenRequest(() => setOpen(true));
+    return () => { off(); };
+  }, []);
   if (items.length === 0) return null;
   const allAmenities = Array.from(new Set(items.flatMap((i) => i.amenities ?? [])));
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-card shadow-lift">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
+      <div className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border bg-card/95 shadow-lift backdrop-blur md:left-[calc(var(--sidebar-width)+0.75rem)]">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
           <span className="text-sm font-medium text-muted-foreground">
             Comparar ({items.length}/{MAX_COMPARE})
           </span>

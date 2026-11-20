@@ -22,9 +22,9 @@ export const Route = createFileRoute("/")({
   loader: ({ context, deps }) => context.queryClient.ensureQueryData(hotelsQuery(deps.city)),
   head: () => ({
     meta: [
-      { title: "Estadia — Reserve hotéis com facilidade" },
+      { title: "LUV CONECT — Reserve hotéis com facilidade" },
       { name: "description", content: "Encontre e compare hotéis e quartos por destino, datas e número de hóspedes." },
-      { property: "og:title", content: "Estadia — Reserve hotéis com facilidade" },
+      { property: "og:title", content: "LUV CONECT — Reserve hotéis com facilidade" },
       { property: "og:description", content: "Encontre e compare hotéis e quartos por destino, datas e hóspedes." },
     ],
   }),
@@ -37,10 +37,10 @@ function Home() {
   const search = Route.useSearch();
   const { data: hotels } = useSuspenseQuery(hotelsQuery(search.city));
   return (
-    <main className="pb-28">
-      <section className="bg-hero">
-        <div className="mx-auto max-w-6xl px-4 pb-16 pt-20">
-          <h1 className="max-w-2xl font-display text-4xl font-semibold leading-tight text-foreground md:text-6xl">
+    <main className="pb-10">
+      <section className="px-3 pt-3 md:px-6 md:pt-6">
+        <div className="bg-hero mx-auto max-w-6xl rounded-3xl border px-5 pb-10 pt-12 md:px-10 md:pb-14 md:pt-16">
+          <h1 className="max-w-2xl font-display text-4xl font-semibold leading-tight text-foreground md:text-5xl">
             Sua próxima estadia, <em className="text-primary">sem complicação.</em>
           </h1>
           <p className="mt-4 max-w-lg text-muted-foreground">Busque, compare e escolha o quarto ideal.</p>
@@ -48,7 +48,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pt-12">
+      <section id="hoteis" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-12 md:px-6">
         <div className="mb-6 flex items-end justify-between">
           <h2 className="font-display text-2xl font-semibold">
             {search.city ? `Hotéis em “${search.city}”` : "Hotéis em destaque"}
@@ -56,7 +56,7 @@ function Home() {
           <span className="text-sm text-muted-foreground">{hotels.length} resultado(s)</span>
         </div>
 
-        <div className="mb-8">
+        <div id="mapa" className="mb-10 scroll-mt-20 overflow-hidden rounded-3xl border bg-card p-4 md:p-5">
           <h3 className="mb-3 font-display text-xl font-semibold">Mapa dos hotéis</h3>
           <HotelMap hotels={hotels.map((hotel) => ({
             id: hotel.id,
@@ -76,11 +76,11 @@ function Home() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {hotels.map((h) => (
-              <article key={h.id} className="group overflow-hidden rounded-2xl border bg-card transition hover:shadow-lift">
+              <article key={h.id} className="group overflow-hidden rounded-3xl border bg-card transition hover:-translate-y-0.5 hover:shadow-lift">
                 <Link to="/hotel/$id" params={{ id: h.id }} search={search}>
                   <ImagePlaceholder src={h.image_url} alt={h.name} className="aspect-[4/3] w-full" />
                 </Link>
-                <div className="space-y-2 p-4">
+                <div className="space-y-3 p-5">
                   <div className="flex items-start justify-between gap-2">
                     <Link to="/hotel/$id" params={{ id: h.id }} search={search} className="font-semibold text-foreground hover:text-primary">
                       {h.name}
