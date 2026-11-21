@@ -159,7 +159,7 @@ for insert to authenticated with check (user_id = auth.uid());
 -- Hotel managers may edit hotel details, but cannot self-approve or pause listings.
 create or replace function public.protect_hotel_moderation_fields()
 returns trigger language plpgsql security definer set search_path = public
-as $
+as $$
 begin
   if not public.is_super_admin() then
     if tg_op = 'INSERT' then
