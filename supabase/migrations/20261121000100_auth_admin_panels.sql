@@ -97,6 +97,11 @@ alter table public.hotels enable row level security;
 alter table public.rooms enable row level security;
 alter table public.bookings enable row level security;
 
+grant select on public.hotels, public.rooms to anon, authenticated;
+grant insert, update, delete on public.hotels, public.rooms to authenticated;
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update on public.bookings to authenticated;
+
 drop policy if exists "profiles_read_self_or_super_admin" on public.profiles;
 create policy "profiles_read_self_or_super_admin" on public.profiles
 for select to authenticated using (id = auth.uid() or public.is_super_admin());
@@ -104,6 +109,10 @@ drop policy if exists "profiles_update_self_or_super_admin" on public.profiles;
 create policy "profiles_update_self_or_super_admin" on public.profiles
 for update to authenticated using (id = auth.uid() or public.is_super_admin())
 with check (id = auth.uid() or public.is_super_admin());
+
+-- Remove permissive legacy policies: PostgreSQL combines permissive policies with OR.
+drop policy if exists "Public can view active hotels" on public.hotels;
+drop policy if exists "Public can view rooms of active hotels" on public.rooms;
 
 drop policy if exists "hotels_public_read_approved" on public.hotels;
 create policy "hotels_public_read_approved" on public.hotels
