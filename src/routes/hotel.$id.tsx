@@ -10,6 +10,7 @@ import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { CompareToggle } from "@/components/CompareToggle";
 import { HotelMap } from "@/components/HotelMap";
 import { hotelQuery } from "@/lib/hotels";
+import { formatMzn } from "@/lib/hotel-presentation";
 import { useMemo, useState } from "react";
 import { fetchDrivingRoute, getCurrentPosition, type RouteResult } from "@/lib/route";
 
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/hotel/$id")({
   loader: async ({ context, params }) => {
     const hotel = await context.queryClient.ensureQueryData(hotelQuery(params.id));
     if (!hotel) throw notFound();
-    return { name: hotel.name, description: hotel.description };
+    return { name: hotel.name, description: hotel.description, image: hotel.image_url };
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -33,6 +34,9 @@ export const Route = createFileRoute("/hotel/$id")({
       { name: "description", content: loaderData?.description ?? "Detalhes do hotel e quartos disponíveis." },
       { property: "og:title", content: loaderData ? `${loaderData.name} — LUV CONECT` : "Hotel — LUV CONECT" },
       { property: "og:description", content: loaderData?.description ?? "Detalhes do hotel e quartos disponíveis." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      ...(loaderData?.image?.startsWith("https://") ? [{ property: "og:image", content: loaderData.image }, { name: "twitter:image", content: loaderData.image }] : []),
     ],
   }),
   errorComponent: ({ error }) => <p role="alert" className="p-8 text-destructive">{error instanceof Error ? error.message : String(error)}</p>,
@@ -44,8 +48,6 @@ export const Route = createFileRoute("/hotel/$id")({
   ),
   component: HotelPage,
 });
-
-const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function HotelPage() {
   const { id } = Route.useParams();
@@ -149,7 +151,7 @@ function HotelPage() {
                   </div>
                   <div className="flex flex-col items-start justify-between gap-3 border-t p-4 sm:items-end sm:border-l sm:border-t-0">
                     <div className="sm:text-right">
-                      <div className="text-2xl font-semibold text-primary">{brl(Number(r.price_per_night))}</div>
+                      <div className="text-2xl font-semibold text-primary">{formatMzn(Number(r.price_per_night))}</div>
                       <div className="text-xs text-muted-foreground">por noite</div>
                     </div>
                     <Button disabled={!fits} onClick={() => toast.success(`${r.name} selecionado`)}>

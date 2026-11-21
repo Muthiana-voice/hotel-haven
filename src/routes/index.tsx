@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Star, MapPin, Building2, LocateFixed } from "lucide-react";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { Star, MapPin, Building2, Heart, ArrowRight, SlidersHorizontal, Waves, Coffee, Sparkles, TrendingDown } from "lucide-react";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { SearchBar } from "@/components/SearchBar";
 import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { CompareToggle } from "@/components/CompareToggle";
 import { hotelsQuery } from "@/lib/hotels";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useAppExperience } from "@/components/AppExperience";
+import { summarizeRooms, matchesQuickFilter, compareHotelOrder, formatMzn, type QuickFilter, type HotelSort } from "@/lib/hotel-presentation";
 
 const LOCATION_STORAGE_KEY = "luv-conect-location";
 const ALL_LOCATIONS_VALUE = "__all__";
 
 const searchSchema = z.object({
   city: z.string().optional(),
+  favorites: z.boolean().optional(),
   checkin: z.string().optional(),
   checkout: z.string().optional(),
   guests: z.coerce.number().int().min(1).optional(),
@@ -58,6 +63,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Encontre e compare hotéis e quartos por destino, datas e número de hóspedes." },
       { property: "og:title", content: "LUV CONECT — Reserve hotéis com facilidade" },
       { property: "og:description", content: "Encontre e compare hotéis e quartos por destino, datas e hóspedes." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   errorComponent: ({ error }) => <p role="alert" className="p-8 text-destructive">{error instanceof Error ? error.message : String(error)}</p>,
@@ -68,20 +75,29 @@ export const Route = createFileRoute("/")({
 function Home() {
   const search = Route.useSearch();
   const { data: hotels } = useSuspenseQuery(hotelsQuery());
-  const [selectedCity, setSelectedCity] = useState<string | undefined>(search.city);
+  const [selectedCity, setSelectedCity] = useState<string | undefined>(search.city === ALL_LOCATIONS_VALUE ? undefined : search.city);
   const [locationMessage, setLocationMessage] = useState("A localizar hotéis próximos de si…");
-
-  const cities = useMemo(
-    () => Array.from(new Set(hotels.map((hotel) => hotel.city).filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt")),
-    [hotels],
-  );
+  const [filter, setFilter] = useState<QuickFilter>("all");
+  const [sort, setSort] = useState<HotelSort>("recommended");
+  const { favorites, toggleFavorite, setActiveCity } = useAppExperience();
+  // Presentation-only read: the existing hotel queries and location detection stay unchanged.
+  const { data: roomData = [], isError: roomError } = useQuery({
+    queryKey: ["hotel-card-room-summaries"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("rooms").select("hotel_id, price_per_night, capacity, amenities");
+      if (error) throw error;
+      return data;
+    },
+  });
   const activeCity = selectedCity;
-  const visibleHotels = useMemo(
-    () => activeCity
-      ? hotels.filter((hotel) => hotel.city.toLocaleLowerCase().includes(activeCity.toLocaleLowerCase()))
-      : hotels,
-    [hotels, activeCity],
-  );
+  useEffect(() => setActiveCity(activeCity), [activeCity, setActiveCity]);
+  const visibleHotels = useMemo(() => hotels
+    .filter((hotel) => !activeCity || hotel.city.toLocaleLowerCase().includes(activeCity.toLocaleLowerCase()) || hotel.province?.toLocaleLowerCase() === activeCity.toLocaleLowerCase())
+    .filter((hotel) => !search.favorites || favorites.includes(hotel.id))
+    .map((hotel) => ({ ...hotel, summary: summarizeRooms(roomData.filter((room) => room.hotel_id === hotel.id)) }))
+    .filter((hotel) => matchesQuickFilter(hotel.summary.amenities, filter))
+    .sort((a, b) => compareHotelOrder({ rating: a.rating, price: a.summary.price }, { rating: b.rating, price: b.summary.price }, sort)),
+    [hotels, activeCity, search.favorites, favorites, roomData, filter, sort]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -99,7 +115,7 @@ function Home() {
     };
 
     if (search.city) {
-      saveLocation(search.city);
+      saveLocation(search.city === ALL_LOCATIONS_VALUE ? undefined : search.city);
       return () => { cancelled = true; };
     }
 
@@ -145,67 +161,65 @@ function Home() {
     }
   };
 
+  const filters = [
+    { value: "all", label: "Todos", icon: SlidersHorizontal },
+    { value: "cheap", label: "Mais Baratos", icon: TrendingDown },
+    { value: "rated", label: "Melhor Avaliados", icon: Star },
+    { value: "pool", label: "Piscina", icon: Waves },
+    { value: "sea", label: "Frente ao Mar", icon: Sparkles },
+    { value: "breakfast", label: "Pequeno-almoço", icon: Coffee },
+  ] as const;
+
   return (
-    <main className="pb-10">
-      <section className="px-3 pt-3 md:px-6 md:pt-6">
-        <div className="bg-hero mx-auto max-w-6xl rounded-3xl border px-5 pb-10 pt-12 md:px-10 md:pb-14 md:pt-16">
-          <h1 className="max-w-2xl font-display text-4xl font-semibold leading-tight text-foreground md:text-5xl">
-            Sua próxima estadia, <em className="text-primary">sem complicação.</em>
-          </h1>
-          <p className="mt-4 max-w-lg text-muted-foreground">Busque, compare e escolha o quarto ideal.</p>
-          <div className="mt-10"><SearchBar initial={search} /></div>
+    <main className="mx-auto max-w-7xl px-3 pb-32 pt-7 md:px-7 md:pt-9">
+      <section aria-label="Pesquisar hotéis">
+        <div className="mb-5 flex items-end justify-between gap-3">
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase text-primary">Encontre a sua estadia</p>
+            <h1 className="text-2xl font-bold md:text-3xl">{search.favorites ? "Os seus favoritos" : activeCity ? `Hotéis em ${activeCity}` : "Explore os melhores destinos"}</h1>
+          </div>
+          <span className="hidden text-sm text-muted-foreground lg:block">Hotéis · Quartos · Novos destinos</span>
+        </div>
+        <SearchBar initial={{ ...search, city: activeCity }} />
+        <div className="mt-5 flex gap-2 overflow-x-auto pb-2" aria-label="Filtros rápidos">
+          {filters.map(({ value, label, icon: Icon }) => <Button key={value} variant={filter === value ? "default" : "outline"} size="sm" className="h-9 shrink-0 rounded-full px-3 text-xs" aria-pressed={filter === value} onClick={() => { setFilter(value); if (value === "cheap") setSort("price"); else if (value === "rated") setSort("rating"); else if (value === "all") setSort("recommended"); }}><Icon />{label}</Button>)}
         </div>
       </section>
 
-      <section id="hoteis" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-12 md:px-6">
-        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="font-display text-2xl font-semibold">
-              {activeCity ? `Hotéis em “${activeCity}”` : "Hotéis em destaque"}
-            </h2>
-            <span className="text-sm text-muted-foreground">{visibleHotels.length} resultado(s)</span>
-          </div>
-          <div className="w-full sm:max-w-xs">
-            <label htmlFor="hotel-location-filter" className="mb-1.5 flex items-center gap-2 text-sm font-medium">
-              <LocateFixed className="size-4 text-primary" /> Localização
-            </label>
-            <select
-              id="hotel-location-filter"
-              value={activeCity ?? ALL_LOCATIONS_VALUE}
-              onChange={(event) => handleLocationChange(event.target.value)}
-              className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value={ALL_LOCATIONS_VALUE}>Todos os destinos</option>
-              {cities.map((city) => <option key={city} value={city}>{city}</option>)}
-            </select>
-            <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">{locationMessage}</p>
-          </div>
+      <section id="hoteis" className="scroll-mt-44 pt-7">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+          <div><h2 className="text-lg font-bold">{search.favorites ? "Hotéis guardados" : "Estadias para si"}</h2><p className="mt-0.5 text-xs text-muted-foreground" aria-live="polite">{visibleHotels.length} {visibleHotels.length === 1 ? "hotel encontrado" : "hotéis encontrados"}</p></div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">Ordenar por:<select aria-label="Ordenar hotéis" value={sort} onChange={(event) => setSort(event.target.value as HotelSort)} className="max-w-36 rounded-md border bg-card px-2 py-2 font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"><option value="recommended">Recomendados</option><option value="price">Menor preço</option><option value="rating">Avaliação</option></select></label>
         </div>
-
+        <p className="sr-only" aria-live="polite">{locationMessage}</p>
+        {roomError && <p role="status" className="mb-4 text-sm text-muted-foreground">Os preços e as comodidades não estão disponíveis neste momento.</p>}
         {visibleHotels.length === 0 ? (
-          <div className="grid place-items-center gap-3 rounded-2xl border border-dashed py-20 text-center text-muted-foreground">
-            <Building2 className="size-10" />
-            <p>Nenhum hotel encontrado nesta localização.</p>
-            <button type="button" onClick={() => handleLocationChange(ALL_LOCATIONS_VALUE)} className="text-sm font-semibold text-primary underline">
-              Ver todos os hotéis
-            </button>
+          <div className="grid place-items-center gap-3 border-y border-dashed py-20 text-center text-muted-foreground">
+            {search.favorites ? <Heart className="size-10" /> : <Building2 className="size-10" />}
+            <p>{search.favorites ? "Ainda não há hotéis favoritos nesta seleção." : "Nenhum hotel encontrado com estes filtros."}</p>
+            <Button variant="link" onClick={() => { handleLocationChange(ALL_LOCATIONS_VALUE); setFilter("all"); }}>Ver todos os destinos</Button>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">
             {visibleHotels.map((h) => (
-              <article key={h.id} className="group overflow-hidden rounded-3xl border bg-card transition hover:-translate-y-0.5 hover:shadow-lift">
-                <Link to="/hotel/$id" params={{ id: h.id }} search={search}>
-                  <ImagePlaceholder src={h.image_url} alt={h.name} className="aspect-[4/3] w-full" />
-                </Link>
-                <div className="space-y-3 p-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link to="/hotel/$id" params={{ id: h.id }} search={search} className="font-semibold text-foreground hover:text-primary">
-                      {h.name}
-                    </Link>
-                    <span className="inline-flex items-center gap-1 text-sm font-medium"><Star className="size-4 fill-accent text-accent" />{Number(h.rating ?? 0).toFixed(1)}</span>
+              <article key={h.id} className="group min-w-0 overflow-hidden rounded-lg border bg-card transition-shadow hover:shadow-lift">
+                <div className="relative">
+                  <Link to="/hotel/$id" params={{ id: h.id }} search={search} aria-label={`Ver ${h.name}`}>
+                    <ImagePlaceholder src={h.image_url} alt={h.name} className="aspect-[4/3] w-full" />
+                  </Link>
+                  <Button variant="secondary" size="icon" className="absolute right-2 top-2 size-8 rounded-full bg-card/95 shadow-sm" aria-label={`${favorites.includes(h.id) ? "Remover dos" : "Adicionar aos"} favoritos: ${h.name}`} aria-pressed={favorites.includes(h.id)} title="Favoritar hotel" onClick={() => toggleFavorite(h.id)}><Heart className={favorites.includes(h.id) ? "fill-primary text-primary" : "text-foreground"} /></Button>
+                  <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-md bg-card/95 px-2 py-1 text-xs font-bold shadow-sm"><Star className="size-3 fill-accent text-accent" />{h.rating == null ? "Sem nota" : Number(h.rating).toFixed(1)}</span>
+                </div>
+                <div className="flex flex-col gap-2 p-3 md:p-4">
+                  <Link to="/hotel/$id" params={{ id: h.id }} search={search} className="line-clamp-2 min-h-10 break-words text-sm font-bold leading-5 text-foreground hover:text-primary md:text-base">{h.name}</Link>
+                  <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground"><MapPin className="size-3 shrink-0" /><span className="truncate">{h.city}</span></p>
+                  <div className="mt-2 border-t pt-3">
+                    <p className="text-[10px] text-muted-foreground">{h.summary.price == null ? "Preço" : "A partir de"}</p>
+                    <p className="break-words text-base font-extrabold text-primary md:text-xl">{h.summary.price == null ? "Consultar" : formatMzn(h.summary.price)}</p>
+                    <p className="text-[10px] text-muted-foreground">por noite</p>
                   </div>
-                  <p className="flex items-center gap-1 text-sm text-muted-foreground"><MapPin className="size-3.5" />{h.city}</p>
-                  <CompareToggle item={{ key: `hotel-${h.id}`, kind: "hotel", name: h.name, subtitle: `${h.city} · ★ ${Number(h.rating ?? 0).toFixed(1)}` }} />
+                  <CompareToggle item={{ key: `hotel-${h.id}`, kind: "hotel", name: h.name, subtitle: `${h.city} · ★ ${Number(h.rating ?? 0).toFixed(1)}`, ...h.summary }} />
+                  <Button asChild className="mt-1 h-10 w-full gap-1 px-2 text-xs md:text-sm"><Link to="/hotel/$id" params={{ id: h.id }} search={search}>Ver Quartos<ArrowRight className="size-3.5" /></Link></Button>
                 </div>
               </article>
             ))}

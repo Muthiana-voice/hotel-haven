@@ -28,3 +28,8 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Application UI
+- Share account dialogs and device-local favorites through AppExperienceProvider; navigation must use the same state on desktop and mobile.
+- Keep hotel presentation summaries separate from existing hotel queries; read actual room fields without changing schema, connection or location detection.
+- Keep the existing Render runtime/build configuration unchanged during visual updates.
