@@ -8,11 +8,11 @@ export function SiteHeader() {
     <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl">
       <div className="grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 md:px-6">
         <SidebarTrigger className="md:invisible" aria-label="Abrir menu" />
-        <Link to="/" search={{}} className="justify-self-center truncate font-display text-xl font-semibold tracking-[0.18em] text-foreground md:text-2xl">
+        <Link to="/" search={{}} title="LUV CONECT — O mundo mais perto de si" className="justify-self-center truncate font-display text-xl font-semibold tracking-[0.18em] text-foreground md:text-2xl">
           LUV <span className="text-primary">CONECT</span>
         </Link>
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Entrar">
-          <UserRound />
+        <Button asChild variant="ghost" size="icon" className="rounded-full" aria-label="Entrar / Conta">
+          <Link to="/auth"><UserRound /></Link>
         </Button>
       </div>
     </header>
