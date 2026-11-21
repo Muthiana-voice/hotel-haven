@@ -65,6 +65,18 @@ drop trigger if exists on_auth_user_created_profile on auth.users;
 create trigger on_auth_user_created_profile after insert on auth.users
 for each row execute procedure public.handle_new_auth_user();
 
+
+-- Create profiles for accounts that existed before this migration.
+insert into public.profiles (id, email, full_name, role)
+select
+  u.id,
+  u.email,
+  nullif(u.raw_user_meta_data->>'full_name',''),
+  case when u.raw_user_meta_data->>'role' in ('cliente','hotel_admin')
+       then u.raw_user_meta_data->>'role' else 'cliente' end
+from auth.users u
+on conflict (id) do update set email = excluded.email;
+
 create or replace function public.protect_profile_role()
 returns trigger language plpgsql security definer set search_path = public
 as $$
