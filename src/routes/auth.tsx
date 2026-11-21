@@ -15,6 +15,20 @@ function AuthPage() {
   const [role, setRole] = useState<"cliente" | "hotel_admin">("cliente");
   const [busy, setBusy] = useState(false);
 
+  async function signInWithGoogle() {
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) throw error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível iniciar a autenticação com Google.");
+      setBusy(false);
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -48,7 +62,20 @@ function AuthPage() {
         <Link to="/" search={{}} className="text-sm text-muted-foreground hover:text-foreground">← Voltar ao LUV CONECT</Link>
         <h1 className="mt-5 font-display text-3xl font-semibold">{mode === "login" ? "Entrar na sua conta" : "Criar conta"}</h1>
         <p className="mt-2 text-sm text-muted-foreground">O mundo mais perto de si.</p>
-        <form onSubmit={submit} className="mt-6 space-y-4">
+        <button
+          type="button"
+          onClick={signInWithGoogle}
+          disabled={busy}
+          className="mt-6 flex h-11 w-full items-center justify-center rounded-lg border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {busy ? "A processar…" : "Continuar com Google"}
+        </button>
+        <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          <span>ou utilize o seu e-mail</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+        <form onSubmit={submit} className="space-y-4">
           {mode === "register" && <>
             <label className="block text-sm font-medium">Nome completo
               <input required value={fullName} onChange={e=>setFullName(e.target.value)} className="mt-1 h-11 w-full rounded-lg border bg-background px-3" autoComplete="name" />
