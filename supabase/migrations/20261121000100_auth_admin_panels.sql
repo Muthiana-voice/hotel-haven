@@ -171,7 +171,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 drop trigger if exists protect_hotel_moderation_fields_trigger on public.hotels;
 create trigger protect_hotel_moderation_fields_trigger
 before insert or update on public.hotels
