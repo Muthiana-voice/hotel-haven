@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { Map as LeafletMap, Marker } from "leaflet";
+import type { Map as LeafletMap, Marker, LeafletMouseEvent } from "leaflet";
 
 type Props = { latitude: number; longitude: number; onChange: (latitude: number, longitude: number) => void };
 
@@ -21,7 +21,7 @@ export function LocationPickerMap({ latitude, longitude, onChange }: Props) {
         attribution: "&copy; OpenStreetMap contributors", maxZoom: 19,
       }).addTo(map);
       markerRef.current = L.marker([latitude, longitude], { draggable: true }).addTo(map);
-      map.on("click", (event: L.LeafletMouseEvent) => {
+      map.on("click", (event: LeafletMouseEvent) => {
         const { lat, lng } = event.latlng;
         markerRef.current?.setLatLng([lat, lng]);
         changeRef.current(lat, lng);
