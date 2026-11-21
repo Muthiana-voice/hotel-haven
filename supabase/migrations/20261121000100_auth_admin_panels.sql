@@ -134,6 +134,28 @@ drop policy if exists "bookings_guest_create" on public.bookings;
 create policy "bookings_guest_create" on public.bookings
 for insert to authenticated with check (user_id = auth.uid());
 
+
+-- Hotel managers may edit hotel details, but cannot self-approve or pause listings.
+create or replace function public.protect_hotel_moderation_fields()
+returns trigger language plpgsql security definer set search_path = public
+as $
+begin
+  if not public.is_super_admin() then
+    if tg_op = 'INSERT' then
+      new.approved := false;
+      new.paused := false;
+    elsif new.approved is distinct from old.approved or new.paused is distinct from old.paused then
+      raise exception 'Only a super administrator can approve or pause hotels';
+    end if;
+  end if;
+  return new;
+end;
+$;
+drop trigger if exists protect_hotel_moderation_fields_trigger on public.hotels;
+create trigger protect_hotel_moderation_fields_trigger
+before insert or update on public.hotels
+for each row execute procedure public.protect_hotel_moderation_fields();
+
 -- Public image delivery; uploads are restricted to each authenticated user's own folder.
 insert into storage.buckets (id, name, public)
 values ('hotel-images', 'hotel-images', true)
