@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 
 const db = supabase as any;
 type Hotel = { id:string; name:string; province:string|null; city:string; address:string|null; description:string|null; image_url:string|null; latitude:number|null; longitude:number|null; owner_id:string|null; approved:boolean; paused:boolean };
@@ -90,7 +90,7 @@ function HotelAdminPage() {
     return ()=>{active=false;};
   },[]);
 
-  async function saveHotel(event:React.FormEvent<HTMLFormElement>) {
+  async function saveHotel(event:FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true);
     try {
       let photo=imageUrl;
