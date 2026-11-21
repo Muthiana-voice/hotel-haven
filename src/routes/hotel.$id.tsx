@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Map, Star, Users } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, MapPin, Navigation, Route as RouteIcon, Star, Users, X } from "lucide-react";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { toast } from "sonner";
@@ -10,6 +10,9 @@ import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { CompareToggle } from "@/components/CompareToggle";
 import { HotelMap } from "@/components/HotelMap";
 import { hotelQuery } from "@/lib/hotels";
+import { formatMzn } from "@/lib/hotel-presentation";
+import { useMemo, useState } from "react";
+import { fetchDrivingRoute, getCurrentPosition, type RouteResult } from "@/lib/route";
 
 const searchSchema = z.object({
   city: z.string().optional(),
@@ -23,7 +26,7 @@ export const Route = createFileRoute("/hotel/$id")({
   loader: async ({ context, params }) => {
     const hotel = await context.queryClient.ensureQueryData(hotelQuery(params.id));
     if (!hotel) throw notFound();
-    return { name: hotel.name, description: hotel.description };
+    return { name: hotel.name, description: hotel.description, image: hotel.image_url };
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -31,6 +34,9 @@ export const Route = createFileRoute("/hotel/$id")({
       { name: "description", content: loaderData?.description ?? "Detalhes do hotel e quartos disponíveis." },
       { property: "og:title", content: loaderData ? `${loaderData.name} — LUV CONECT` : "Hotel — LUV CONECT" },
       { property: "og:description", content: loaderData?.description ?? "Detalhes do hotel e quartos disponíveis." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      ...(loaderData?.image?.startsWith("https://") ? [{ property: "og:image", content: loaderData.image }, { name: "twitter:image", content: loaderData.image }] : []),
     ],
   }),
   errorComponent: ({ error }) => <p role="alert" className="p-8 text-destructive">{error instanceof Error ? error.message : String(error)}</p>,
@@ -43,13 +49,32 @@ export const Route = createFileRoute("/hotel/$id")({
   component: HotelPage,
 });
 
-const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
 function HotelPage() {
   const { id } = Route.useParams();
   const search = Route.useSearch();
   const { data: hotel } = useSuspenseQuery(hotelQuery(id));
+  const [me, setMe] = useState<[number, number] | null>(null);
+  const [route, setRoute] = useState<RouteResult | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
+  const mapHotels = useMemo(() => hotel ? [{
+    id: hotel.id, name: hotel.name, city: hotel.city, address: hotel.address,
+    latitude: hotel.latitude, longitude: hotel.longitude,
+  }] : [], [hotel]);
   if (!hotel) return null;
+
+  async function traceRoute() {
+    if (hotel?.latitude == null || hotel.longitude == null) return;
+    setLoadingRoute(true);
+    try {
+      const pos = await getCurrentPosition();
+      setMe(pos);
+      setRoute(await fetchDrivingRoute(pos, [hotel.latitude, hotel.longitude]));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível traçar a rota.");
+    } finally {
+      setLoadingRoute(false);
+    }
+  }
   const guests = search.guests ?? 1;
   const rooms = [...(hotel.rooms ?? [])].sort((a, b) => Number(a.price_per_night) - Number(b.price_per_night));
 
@@ -72,18 +97,30 @@ function HotelPage() {
         </div>
         <div className="min-w-0">
           {hotel.latitude != null && hotel.longitude != null ? (
-            <HotelMap
-              singleHotel
-              className="h-[320px] sm:h-[380px]"
-              hotels={[{
-                id: hotel.id,
-                name: hotel.name,
-                city: hotel.city,
-                address: hotel.address,
-                latitude: hotel.latitude,
-                longitude: hotel.longitude,
-              }]}
-            />
+            <div className="space-y-3">
+              <HotelMap singleHotel className="h-[320px] sm:h-[380px]" hotels={mapHotels} userLocation={me} route={route?.points ?? null} />
+              {route && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-sm">
+                  <div>
+                    <div className="font-semibold">{route.distanceKm.toFixed(1)} km · {Math.round(route.durationMin)} min</div>
+                    <div className="text-xs text-muted-foreground">Rota de carro a partir da sua localização</div>
+                  </div>
+                  <Button variant="ghost" size="icon" aria-label="Limpar rota" onClick={() => { setRoute(null); setMe(null); }}><X /></Button>
+                </div>
+              )}
+              <Button className="min-h-11 w-full rounded-xl" onClick={traceRoute} disabled={loadingRoute}>
+                {loadingRoute ? <Loader2 className="animate-spin" /> : <RouteIcon />}
+                {route ? "Atualizar rota" : "Traçar rota no mapa"}
+              </Button>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${hotel.latitude},${hotel.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                <Navigation className="size-4" /> Abrir no Google Maps <ExternalLink className="size-3.5" />
+              </a>
+            </div>
           ) : (
             <p className="rounded-xl border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
               A localização deste hotel ainda não está disponível no mapa.
@@ -114,7 +151,7 @@ function HotelPage() {
                   </div>
                   <div className="flex flex-col items-start justify-between gap-3 border-t p-4 sm:items-end sm:border-l sm:border-t-0">
                     <div className="sm:text-right">
-                      <div className="text-2xl font-semibold text-primary">{brl(Number(r.price_per_night))}</div>
+                      <div className="text-2xl font-semibold text-primary">{formatMzn(Number(r.price_per_night))}</div>
                       <div className="text-xs text-muted-foreground">por noite</div>
                     </div>
                     <Button disabled={!fits} onClick={() => toast.success(`${r.name} selecionado`)}>

@@ -25,6 +25,8 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string
+          owner_id: string | null
+          province: string | null
           rating: number | null
           status: string
         }
@@ -38,6 +40,8 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name: string
+          owner_id?: string | null
+          province?: string | null
           rating?: number | null
           status?: string
         }
@@ -51,8 +55,34 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string
+          owner_id?: string | null
+          province?: string | null
           rating?: number | null
           status?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          role?: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string
         }
         Relationships: []
       }
