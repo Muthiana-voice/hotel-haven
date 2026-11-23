@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useRouter } from "@tanstack/react-router";
 import type { Map as LeafletMap, Marker } from "leaflet";
 
 export type HotelMapItem = {
@@ -30,6 +31,10 @@ export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const router = useRouter();
+  // Referência estável: evita recriar o mapa sempre que o router muda.
+  const routerRef = useRef(router);
+  routerRef.current = router;
   const availableHotels = hotels.filter(hasCoordinates);
 
   useEffect(() => {
@@ -75,8 +80,15 @@ export function HotelMap({ hotels, className = "", zoom = 6, singleHotel = false
         location.textContent = [hotel.address, hotel.city].filter(Boolean).join(", ");
         if (location.textContent) popup.appendChild(location);
         const link = document.createElement("a");
+        // O href mantém o link acessível (clique direito / novo separador);
+        // o clique normal usa o router para não recarregar a página.
         link.href = "/hotel/" + encodeURIComponent(hotel.id);
         link.textContent = "Ver detalhes do hotel";
+        link.addEventListener("click", (event) => {
+          if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          void routerRef.current.navigate({ to: "/hotel/$id", params: { id: hotel.id }, search: {} });
+        });
         popup.appendChild(link);
         marker.bindPopup(popup);
         return marker;

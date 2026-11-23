@@ -3,9 +3,7 @@ import { X, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { compareStore, useCompare, MAX_COMPARE } from "@/lib/compare";
-
-const brl = (n?: number | null) =>
-  n == null ? "—" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+import { formatMZN } from "@/lib/format";
 
 export function CompareBar() {
   const items = useCompare();
@@ -61,7 +59,7 @@ export function CompareBar() {
               <tbody className="divide-y">
                 <tr>
                   <td className="p-3 text-muted-foreground">Preço / noite</td>
-                  {items.map((i) => <td key={i.key} className="p-3 font-semibold text-primary">{brl(i.price)}</td>)}
+                  {items.map((i) => <td key={i.key} className="p-3 font-semibold text-primary">{formatMZN(i.price)}</td>)}
                 </tr>
                 <tr>
                   <td className="p-3 text-muted-foreground">Capacidade</td>
