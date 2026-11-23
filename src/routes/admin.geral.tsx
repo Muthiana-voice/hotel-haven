@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { requireRole } from "@/lib/auth";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck, Building2, BedDouble, Users, Trash2, MailPlus, X } from "lucide-react";
 
@@ -13,7 +14,7 @@ type Invite={email:string;role:"hotel_admin";created_at:string;accepted_at:strin
 
 const ROLE_LABEL:Record<Role,string>={cliente:"Cliente",hotel_admin:"Gestor de Hotel",super_admin:"Administrador Geral"};
 
-export const Route=createFileRoute("/admin/geral")({component:GeneralAdminPage});
+export const Route=createFileRoute("/admin/geral")({beforeLoad:()=>requireRole(["super_admin"]),component:GeneralAdminPage});
 
 function GeneralAdminPage(){
   const [loading,setLoading]=useState(true);

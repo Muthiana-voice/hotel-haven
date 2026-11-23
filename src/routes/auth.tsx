@@ -1,29 +1,34 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { fetchRole, useGoToPanel } from "@/lib/auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
 
 function AuthPage() {
-  const navigate = useNavigate();
+  const goToPanel = useGoToPanel();
+  const redirected = useRef(false);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // If the OAuth provider returns to this page instead of /auth/callback,
-  // complete the login as soon as Supabase publishes the authenticated session.
+  // Se o fornecedor OAuth regressar a esta página em vez de /auth/callback,
+  // conclui o login assim que o Supabase publicar a sessão autenticada.
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        void navigate({ to: "/", replace: true });
+      if (event === "SIGNED_IN" && session && !redirected.current) {
+        redirected.current = true;
+        const userId = session.user.id;
+        // Não se fazem chamadas ao Supabase dentro deste callback: adia-se para evitar bloqueios.
+        setTimeout(() => { void fetchRole(userId).then(goToPanel); }, 0);
       }
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [goToPanel]);
 
   async function signInWithGoogle() {
     setBusy(true);
@@ -43,6 +48,7 @@ function AuthPage() {
     event.preventDefault();
     setBusy(true);
     try {
+      let userId: string | undefined;
       if (mode === "register") {
         // O cargo nunca é enviado pelo cliente: toda a conta nova é "cliente".
         // Gestores de hotel são promovidos ou convidados pelo administrador geral.
@@ -57,12 +63,17 @@ function AuthPage() {
           return;
         }
         toast.success("Conta criada com sucesso.");
+        userId = data.session.user.id;
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (error) throw error;
         toast.success("Sessão iniciada.");
+        userId = data.user?.id;
       }
-      await navigate({ to: "/" });
+      if (!redirected.current) {
+        redirected.current = true;
+        await goToPanel(userId ? await fetchRole(userId) : null);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível autenticar.");
     } finally { setBusy(false); }
@@ -96,7 +107,7 @@ function AuthPage() {
           <label className="block text-sm font-medium">E-mail
             <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} className="mt-1 h-11 w-full rounded-lg border bg-background px-3" autoComplete="email" />
           </label>
-          <label className="block text-sm font-medium">Senha
+          <label className="block text-sm font-medium">Palavra-passe
             <input type="password" required minLength={8} value={password} onChange={e=>setPassword(e.target.value)} className="mt-1 h-11 w-full rounded-lg border bg-background px-3" autoComplete={mode === "login" ? "current-password" : "new-password"} />
           </label>
           <Button type="submit" className="h-11 w-full" disabled={busy}>{busy ? "A processar…" : mode === "login" ? "Entrar" : "Criar conta"}</Button>

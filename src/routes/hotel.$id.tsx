@@ -10,6 +10,7 @@ import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { CompareToggle } from "@/components/CompareToggle";
 import { HotelMap } from "@/components/HotelMap";
 import { hotelQuery } from "@/lib/hotels";
+import { formatMZN } from "@/lib/format";
 import { useMemo, useState } from "react";
 import { fetchDrivingRoute, getCurrentPosition, type RouteResult } from "@/lib/route";
 
@@ -44,8 +45,6 @@ export const Route = createFileRoute("/hotel/$id")({
   ),
   component: HotelPage,
 });
-
-const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function HotelPage() {
   const { id } = Route.useParams();
@@ -149,7 +148,7 @@ function HotelPage() {
                   </div>
                   <div className="flex flex-col items-start justify-between gap-3 border-t p-4 sm:items-end sm:border-l sm:border-t-0">
                     <div className="sm:text-right">
-                      <div className="text-2xl font-semibold text-primary">{brl(Number(r.price_per_night))}</div>
+                      <div className="text-2xl font-semibold text-primary">{formatMZN(Number(r.price_per_night))}</div>
                       <div className="text-xs text-muted-foreground">por noite</div>
                     </div>
                     <Button disabled={!fits} onClick={() => toast.success(`${r.name} selecionado`)}>
