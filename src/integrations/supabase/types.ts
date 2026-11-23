@@ -14,9 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          check_in: string
+          check_out: string
+          created_at: string
+          guest_email: string
+          guest_name: string
+          guests: number
+          hotel_id: string
+          id: string
+          room_id: string | null
+          status: string
+          total_amount: number
+          user_id: string | null
+        }
+        Insert: {
+          check_in: string
+          check_out: string
+          created_at?: string
+          guest_email: string
+          guest_name: string
+          guests?: number
+          hotel_id: string
+          id?: string
+          room_id?: string | null
+          status?: string
+          total_amount?: number
+          user_id?: string | null
+        }
+        Update: {
+          check_in?: string
+          check_out?: string
+          created_at?: string
+          guest_email?: string
+          guest_name?: string
+          guests?: number
+          hotel_id?: string
+          id?: string
+          room_id?: string | null
+          status?: string
+          total_amount?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotels: {
         Row: {
           address: string | null
+          approved: boolean
           city: string
           created_at: string
           description: string | null
@@ -26,12 +87,14 @@ export type Database = {
           longitude: number | null
           name: string
           owner_id: string | null
+          paused: boolean
           province: string | null
           rating: number | null
           status: string
         }
         Insert: {
           address?: string | null
+          approved?: boolean
           city: string
           created_at?: string
           description?: string | null
@@ -41,12 +104,14 @@ export type Database = {
           longitude?: number | null
           name: string
           owner_id?: string | null
+          paused?: boolean
           province?: string | null
           rating?: number | null
           status?: string
         }
         Update: {
           address?: string | null
+          approved?: boolean
           city?: string
           created_at?: string
           description?: string | null
@@ -56,6 +121,7 @@ export type Database = {
           longitude?: number | null
           name?: string
           owner_id?: string | null
+          paused?: boolean
           province?: string | null
           rating?: number | null
           status?: string
@@ -82,6 +148,30 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          role?: string
+        }
+        Relationships: []
+      }
+      role_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          invited_by: string | null
+          role: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          invited_by?: string | null
+          role?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          invited_by?: string | null
           role?: string
         }
         Relationships: []
@@ -135,7 +225,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      apply_role_invite: {
+        Args: { p_email: string; p_user: string }
+        Returns: undefined
+      }
+      current_profile_role: { Args: never; Returns: string }
+      is_super_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
