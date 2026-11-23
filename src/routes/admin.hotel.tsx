@@ -3,6 +3,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
 import { Button } from "@/components/ui/button";
+import { requireRole } from "@/lib/auth";
+import { formatMZN } from "@/lib/format";
 import { toast } from "sonner";
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 
@@ -11,7 +13,7 @@ type Hotel = { id:string; name:string; province:string|null; city:string; addres
 type Room = { id:string; hotel_id:string; name:string; price_per_night:number; capacity:number; amenities:string[]; images:string[]; description:string|null };
 type Booking = { id:string; guest_name:string; guest_email:string; check_in:string; check_out:string; guests:number; total_amount:number; status:string };
 
-export const Route = createFileRoute("/admin/hotel")({ component: HotelAdminPage });
+export const Route = createFileRoute("/admin/hotel")({ beforeLoad: () => requireRole(["hotel_admin", "super_admin"]), component: HotelAdminPage });
 
 async function uploadImage(file: File, userId: string) {
   if (!file.type.startsWith("image/")) throw new Error("Seleccione um ficheiro de imagem.");
@@ -168,7 +170,7 @@ function HotelAdminPage() {
     <section className="rounded-2xl border bg-card p-5 sm:p-7">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">Quartos do hotel</h2><span className="text-sm text-muted-foreground">{rooms.length} quarto(s)</span></div>
       <div className="space-y-3">{rooms.map(room=><article key={room.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
-        <div><h3 className="font-medium">{room.name}</h3><p className="text-sm text-muted-foreground">{Number(room.price_per_night).toLocaleString("pt-MZ")} MZN/noite · {room.capacity} pessoa(s)</p><p className="text-xs text-muted-foreground">{room.amenities?.join(", ")}</p></div>
+        <div><h3 className="font-medium">{room.name}</h3><p className="text-sm text-muted-foreground">{formatMZN(Number(room.price_per_night))}/noite · {room.capacity} pessoa(s)</p><p className="text-xs text-muted-foreground">{room.amenities?.join(", ")}</p></div>
         <div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>{setRoomId(room.id);setRoomName(room.name);setPrice(String(room.price_per_night));setCapacity(String(room.capacity));setAmenities(room.amenities?.join(", ")??"");setRoomDescription(room.description??"");}}>Editar</Button><Button size="icon" variant="destructive" onClick={()=>void deleteRoom(room.id)} aria-label="Eliminar quarto"><Trash2 className="size-4"/></Button></div>
       </article>)}</div>
       <form onSubmit={saveRoom} className="mt-6 grid gap-4 border-t pt-6 md:grid-cols-2">
@@ -183,7 +185,7 @@ function HotelAdminPage() {
       </form>
     </section>
     <section className="rounded-2xl border bg-card p-5 sm:p-7"><h2 className="mb-4 text-xl font-semibold">Reservas recebidas</h2>
-      {bookings.length===0?<p className="text-sm text-muted-foreground">Ainda não existem reservas para este hotel.</p>:<div className="space-y-3">{bookings.map(b=><article key={b.id} className="rounded-xl border p-3 text-sm"><div className="flex flex-wrap justify-between gap-2 font-medium"><span>{b.guest_name} · {b.guest_email}</span><span>{b.status}</span></div><p className="mt-1 text-muted-foreground">{b.check_in} → {b.check_out} · {b.guests} hóspede(s) · {Number(b.total_amount).toLocaleString("pt-MZ")} MZN</p></article>)}</div>}
+      {bookings.length===0?<p className="text-sm text-muted-foreground">Ainda não existem reservas para este hotel.</p>:<div className="space-y-3">{bookings.map(b=><article key={b.id} className="rounded-xl border p-3 text-sm"><div className="flex flex-wrap justify-between gap-2 font-medium"><span>{b.guest_name} · {b.guest_email}</span><span>{b.status}</span></div><p className="mt-1 text-muted-foreground">{b.check_in} → {b.check_out} · {b.guests} hóspede(s) · {formatMZN(Number(b.total_amount))}</p></article>)}</div>}
     </section>
     <p className="text-xs text-muted-foreground">As imagens são guardadas no bucket público hotel-images. Novos hotéis ficam pendentes de aprovação pela administração geral.</p>
   </main>;
