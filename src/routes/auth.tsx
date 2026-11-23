@@ -12,7 +12,6 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"cliente" | "hotel_admin">("cliente");
   const [busy, setBusy] = useState(false);
 
   // If the OAuth provider returns to this page instead of /auth/callback,
@@ -45,9 +44,11 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "register") {
+        // O cargo nunca é enviado pelo cliente: toda a conta nova é "cliente".
+        // Gestores de hotel são promovidos ou convidados pelo administrador geral.
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(), password,
-          options: { data: { full_name: fullName.trim(), role } },
+          options: { data: { full_name: fullName.trim() } },
         });
         if (error) throw error;
         if (!data.session) {
@@ -87,17 +88,11 @@ function AuthPage() {
           <span className="h-px flex-1 bg-border" />
         </div>
         <form onSubmit={submit} className="space-y-4">
-          {mode === "register" && <>
+          {mode === "register" && (
             <label className="block text-sm font-medium">Nome completo
               <input required value={fullName} onChange={e=>setFullName(e.target.value)} className="mt-1 h-11 w-full rounded-lg border bg-background px-3" autoComplete="name" />
             </label>
-            <label className="block text-sm font-medium">Tipo de conta
-              <select value={role} onChange={e=>setRole(e.target.value as "cliente" | "hotel_admin")} className="mt-1 h-11 w-full rounded-lg border bg-background px-3">
-                <option value="cliente">Cliente</option>
-                <option value="hotel_admin">Gestor de Hotel</option>
-              </select>
-            </label>
-          </>}
+          )}
           <label className="block text-sm font-medium">E-mail
             <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} className="mt-1 h-11 w-full rounded-lg border bg-background px-3" autoComplete="email" />
           </label>
@@ -109,7 +104,7 @@ function AuthPage() {
         <button type="button" onClick={()=>setMode(mode === "login" ? "register" : "login")} className="mt-5 w-full text-sm text-primary underline">
           {mode === "login" ? "Ainda não tem conta? Registar" : "Já tem conta? Entrar"}
         </button>
-        <p className="mt-4 text-xs text-muted-foreground">O cargo de administrador geral não pode ser escolhido no registo público.</p>
+        <p className="mt-4 text-xs text-muted-foreground">Contas de gestor de hotel e de administrador são atribuídas pela administração geral do LUV CONECT.</p>
       </section>
     </main>
   );
