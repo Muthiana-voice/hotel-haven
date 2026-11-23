@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Building2, BedDouble, Users, Trash2 } from "lucide-react";
+import { Loader2, ShieldCheck, Building2, BedDouble, Users, Trash2, MailPlus, X } from "lucide-react";
 
 const db=supabase as any;
 type Hotel={id:string;name:string;city:string;province:string|null;approved:boolean;paused:boolean};
-type Profile={id:string;email:string|null;full_name:string|null;role:"cliente"|"hotel_admin"|"super_admin";created_at:string};
+type Role="cliente"|"hotel_admin"|"super_admin";
+type Profile={id:string;email:string|null;full_name:string|null;role:Role;created_at:string};
+type Invite={email:string;role:"hotel_admin";created_at:string;accepted_at:string|null};
+
+const ROLE_LABEL:Record<Role,string>={cliente:"Cliente",hotel_admin:"Gestor de Hotel",super_admin:"Administrador Geral"};
 
 export const Route=createFileRoute("/admin/geral")({component:GeneralAdminPage});
 
@@ -17,16 +21,19 @@ function GeneralAdminPage(){
   const [allowed,setAllowed]=useState(false);
   const [hotels,setHotels]=useState<Hotel[]>([]);
   const [profiles,setProfiles]=useState<Profile[]>([]);
+  const [invites,setInvites]=useState<Invite[]>([]);
+  const [inviteEmail,setInviteEmail]=useState("");
   const [roomCount,setRoomCount]=useState(0);
 
   async function load(){
-    const [h,p,r]=await Promise.all([
+    const [h,p,r,i]=await Promise.all([
       db.from("hotels").select("id,name,city,province,approved,paused").order("created_at",{ascending:false}),
       db.from("profiles").select("id,email,full_name,role,created_at").order("created_at",{ascending:false}),
       db.from("rooms").select("id",{count:"exact",head:true}),
+      db.from("role_invites").select("email,role,created_at,accepted_at").order("created_at",{ascending:false}),
     ]);
-    if(h.error) throw h.error;if(p.error) throw p.error;if(r.error) throw r.error;
-    setHotels(h.data??[]);setProfiles(p.data??[]);setRoomCount(r.count??0);
+    if(h.error) throw h.error;if(p.error) throw p.error;if(r.error) throw r.error;if(i.error) throw i.error;
+    setHotels(h.data??[]);setProfiles(p.data??[]);setRoomCount(r.count??0);setInvites(i.data??[]);
   }
 
   useEffect(()=>{
@@ -67,8 +74,47 @@ function GeneralAdminPage(){
     setBusy("");
   }
 
+  // Convite por e-mail: se a conta já existe é promovida de imediato; caso contrário o convite
+  // fica pendente e o cargo é aplicado quando a pessoa entrar (com o e-mail confirmado).
+  async function inviteHotelAdmin(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();
+    const email=inviteEmail.trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast.error("Indique um e-mail válido.");return;}
+    setBusy("invite");
+    try{
+      const existing=profiles.find(p=>(p.email??"").toLowerCase()===email);
+      if(existing){
+        if(existing.role!=="cliente"){toast.info("Esta conta já tem o cargo: "+ROLE_LABEL[existing.role]+".");return;}
+        const {error}=await db.from("profiles").update({role:"hotel_admin"}).eq("id",existing.id);
+        if(error) throw error;
+        toast.success("Conta existente promovida a Gestor de Hotel.");
+      }else{
+        const {data:{session}}=await supabase.auth.getSession();
+        const {error}=await db.from("role_invites").upsert(
+          {email,role:"hotel_admin",invited_by:session?.user.id ?? null,accepted_at:null},
+          {onConflict:"email"},
+        );
+        if(error) throw error;
+        toast.success("Convite registado. A pessoa deve entrar no LUV CONECT com este e-mail para receber o cargo.");
+      }
+      setInviteEmail("");
+      await load();
+    }catch(e){toast.error(e instanceof Error?e.message:"Não foi possível registar o convite.");}
+    finally{setBusy("");}
+  }
+  async function cancelInvite(email:string){
+    if(!window.confirm("Cancelar o convite para "+email+"?"))return;
+    setBusy("invite:"+email);
+    const {error}=await db.from("role_invites").delete().eq("email",email);
+    if(error) toast.error(error.message);else{await load();toast.success("Convite removido.");}
+    setBusy("");
+  }
+
   if(loading)return <div className="grid min-h-[50vh] place-items-center"><Loader2 className="animate-spin"/></div>;
   if(!allowed)return <main className="mx-auto max-w-xl p-10 text-center"><ShieldCheck className="mx-auto size-10 text-muted-foreground"/><h1 className="mt-3 text-2xl font-semibold">Acesso restrito</h1><p className="mt-2 text-muted-foreground">A administração geral está disponível exclusivamente para contas super_admin.</p><Button asChild className="mt-5"><Link to="/auth">Entrar / Conta</Link></Button></main>;
+
+  const pendingInvites=invites.filter(i=>!i.accepted_at);
+  const acceptedInvites=invites.filter(i=>i.accepted_at);
 
   return <main className="mx-auto max-w-6xl space-y-8 px-4 py-8">
     <header><p className="text-sm font-medium text-primary">LUV CONECT · Controlo da plataforma</p><h1 className="font-display text-3xl font-semibold">Administração Geral</h1><p className="mt-1 text-sm text-muted-foreground">Aprove hotéis, acompanhe a plataforma e administre os cargos de acesso.</p></header>
@@ -85,6 +131,22 @@ function GeneralAdminPage(){
           <Button size="icon" variant="destructive" aria-label="Excluir hotel" disabled={busy===h.id} onClick={()=>void deleteHotel(h)}><Trash2 className="size-4"/></Button>
         </div></div>
       </article>)}</div>}
+    </section>
+    <section className="rounded-2xl border bg-card p-5 sm:p-7">
+      <h2 className="text-xl font-semibold">Convidar gestor de hotel</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Indique o e-mail da pessoa. Se já tiver conta, passa a Gestor de Hotel de imediato; caso contrário o cargo é aplicado quando entrar no LUV CONECT com esse e-mail.</p>
+      <form onSubmit={inviteHotelAdmin} className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <input type="email" required value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="gestor@hotel.co.mz" aria-label="E-mail do gestor de hotel" className="h-11 w-full rounded-lg border bg-background px-3 sm:max-w-sm" autoComplete="off"/>
+        <Button type="submit" disabled={busy==="invite"}><MailPlus className="mr-2 size-4"/>{busy==="invite"?"A registar…":"Convidar"}</Button>
+      </form>
+      {pendingInvites.length>0&&<div className="mt-5 space-y-2">
+        <h3 className="text-sm font-medium">Convites pendentes ({pendingInvites.length})</h3>
+        {pendingInvites.map(i=><article key={i.email} className="flex items-center justify-between gap-3 rounded-xl border p-3 text-sm">
+          <div className="min-w-0"><p className="truncate font-medium">{i.email}</p><p className="text-xs text-muted-foreground">Convidado em {new Date(i.created_at).toLocaleDateString("pt-MZ")} · aguarda a primeira entrada</p></div>
+          <Button size="icon" variant="ghost" aria-label={"Cancelar convite de "+i.email} disabled={busy==="invite:"+i.email} onClick={()=>void cancelInvite(i.email)}><X className="size-4"/></Button>
+        </article>)}
+      </div>}
+      {acceptedInvites.length>0&&<p className="mt-4 text-xs text-muted-foreground">Convites já aceites: {acceptedInvites.length}.</p>}
     </section>
     <section className="rounded-2xl border bg-card p-5 sm:p-7"><h2 className="mb-5 text-xl font-semibold">Utilizadores e cargos</h2>
       {profiles.length===0?<p className="text-sm text-muted-foreground">Não existem perfis para apresentar.</p>:<div className="space-y-3">{profiles.map(p=><article key={p.id} className="flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between">
