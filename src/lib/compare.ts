@@ -1,13 +1,20 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from 'react';
 
 export type CompareItem = {
   key: string;
-  kind: "hotel" | "room";
+  kind: 'hotel' | 'room';
   name: string;
   subtitle?: string;
   price?: number | null;
   capacity?: number | null;
   amenities?: string[];
+  /** Campos extra usados pelo comparador de hotéis. */
+  hotelId?: string;
+  image?: string | null;
+  rating?: number | null;
+  distanceKm?: number | null;
+  payAtHotel?: boolean;
+  breakfast?: boolean;
 };
 
 export const MAX_COMPARE = 3;
